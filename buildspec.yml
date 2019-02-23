@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - echo DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME
+      - echo REPOSITORY_URI=$REPOSITORY_URI
+  build:
+    commands:
+      - echo Build started on `date`
+      - mvn -B clean install docker:build
+      - docker tag $DOCKER_IMAGE_NAME:latest $REPOSITORY_URI:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - echo Writing image definitions file...
+      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_IMAGE_NAME $REPOSITORY_URI:latest > imagedefinitions.json
+      - cat imagedefinitions.json
+artifacts:
+    files: imagedefinitions.json
+cache:
+    paths:
+     - '/root/.m2/**/*'
